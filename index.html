@@ -1,4 +1,43 @@
 <script>
+// Mobile-safe dictation: rebuild one session transcript instead of appending events.
+document.addEventListener('DOMContentLoaded',()=>{
+  const frame=document.querySelector('#form');
+  function mergeText(current, incoming){
+    current=(current||'').replace(/\s+/g,' ').trim(); incoming=(incoming||'').replace(/\s+/g,' ').trim();
+    if(!incoming||current===incoming||current.includes(incoming))return current;
+    if(incoming.includes(current))return incoming;
+    const a=current.split(' '),b=incoming.split(' '); let overlap=0;
+    for(let n=Math.min(a.length,b.length);n>0;n--)if(a.slice(-n).join(' ')===b.slice(0,n).join(' ')){overlap=n;break;}
+    return a.concat(b.slice(overlap)).join(' ');
+  }
+  function repair(){
+    const d=frame.contentDocument,w=frame.contentWindow;if(!d||!w)return;
+    const note=d.querySelector('.voice-note');let recognition,activeButton;
+    const tell=t=>{if(note)note.textContent=t};
+    d.querySelectorAll('button.mic').forEach(button=>{
+      const field=button.previousElementSibling;if(!field||button.dataset.safeDictation)return;
+      button.dataset.safeDictation='true';button.onclick=()=>{
+        const Recognition=w.SpeechRecognition||w.webkitSpeechRecognition;
+        if(!Recognition){tell('دیکتهٔ صوتی در این مرورگر پشتیبانی نمی‌شود؛ از Google Chrome استفاده کنید.');return;}
+        if(activeButton===button&&recognition){recognition.stop();return;}
+        if(recognition)recognition.stop();
+        const base=field.value.trim();let session='';activeButton=button;recognition=new Recognition();
+        recognition.lang='fa-IR';recognition.continuous=false;recognition.interimResults=false;recognition.maxAlternatives=1;
+        recognition.onstart=()=>{button.classList.add('listening');tell('در حال شنیدن… صحبت کنید.');};
+        recognition.onresult=e=>{
+          for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)session=mergeText(session,e.results[i][0].transcript);
+          field.value=[base,session].filter(Boolean).join(' ');field.dispatchEvent(new Event('input',{bubbles:true}));
+        };
+        recognition.onerror=e=>tell('دیکته انجام نشد: '+e.error);
+        recognition.onend=()=>{button.classList.remove('listening');activeButton=null;tell('دیکته پایان یافت. متن تکراری ثبت نمی‌شود.');};
+        recognition.start();
+      };
+    });
+  }
+  frame.addEventListener('load',()=>setTimeout(repair,1400));setTimeout(repair,2200);
+});
+</script>
+<script>
 document.addEventListener('DOMContentLoaded',()=>{setTimeout(()=>{const f=document.querySelector('#form'),d=f&&f.contentDocument,w=f&&f.contentWindow;if(!d||!w)return;const note=d.querySelector('.voice-note');let recognition,currentButton;const say=t=>{if(note)note.textContent=t};d.querySelectorAll('button.mic').forEach(button=>{const field=button.previousElementSibling;if(!field)return;button.onclick=()=>{const Recognition=w.SpeechRecognition||w.webkitSpeechRecognition;if(!Recognition){say('دیکتهٔ صوتی در این مرورگر پشتیبانی نمی‌شود؛ از Google Chrome استفاده کنید.');return}if(currentButton===button&&recognition){recognition.stop();return}if(recognition)recognition.stop();recognition=new Recognition();currentButton=button;recognition.lang='fa-IR';recognition.continuous=false;recognition.interimResults=false;recognition.onstart=()=>{button.classList.add('listening');say('در حال شنیدن… صحبت کنید.');};recognition.onresult=e=>{const finalText=[];for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)finalText.push(e.results[i][0].transcript.trim());const text=finalText.join(' ').trim();if(text){field.value+=(field.value?' ':'')+text;field.dispatchEvent(new Event('input',{bubbles:true}));}};recognition.onerror=e=>say('دیکته انجام نشد: '+e.error);recognition.onend=()=>{button.classList.remove('listening');currentButton=null;say('دیکته پایان یافت. متن فقط یک‌بار ثبت شد.');};recognition.start();};});},700);});
 </script>
 <!doctype html>
