@@ -12,7 +12,14 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   function repair(){
     const d=frame.contentDocument,w=frame.contentWindow;if(!d||!w)return;
-    const note=d.querySelector('.voice-note');let recognition,activeButton;
+    const note=d.querySelector('.voice-note');const form=d.querySelector('#intake');let recognition,activeButton;
+    if(form&&!d.querySelector('#confidentiality-notice')){
+      const box=d.createElement('section');box.id='confidentiality-notice';
+      box.innerHTML='<h2>تعهد محرمانگی و امانت‌داری اطلاعات</h2><p>اطلاعاتی که در این پرسش‌نامه ارائه می‌کنید، صرفاً برای بررسی درخواست، طراحی راه‌حل و تهیهٔ پروپوزال استفاده می‌شود و نزد ما به امانت و محرمانه می‌ماند. این اطلاعات، جز در حدود ضرورت انجام همکاری یا در صورت الزام قانونی، بدون رضایت کتبی شما در اختیار شخص یا مجموعهٔ ثالث قرار نمی‌گیرد.</p><p>با انتخاب گزینهٔ زیر تأیید می‌کنید که اطلاعات را آگاهانه ارائه کرده‌اید. در صورت نیاز طرفین، قرارداد محرمانگی مستقل (NDA) نیز قابل تنظیم است.</p><label><input id="confidentiality-accept" type="checkbox" required> متن تعهد محرمانگی را خوانده‌ام و می‌پذیرم.</label>';
+      const style=d.createElement('style');style.textContent='#confidentiality-notice{margin:26px;padding:20px;background:#f1f7f9;border:1px solid #c9dfe7;border-radius:10px}#confidentiality-notice h2{color:#155e75;font-size:1.05rem;margin:0 0 10px}#confidentiality-notice p{font-size:.9rem;color:#334155;margin:8px 0}#confidentiality-notice label{font-size:.9rem;margin:14px 0 0}#confidentiality-accept{width:auto;margin-left:8px}';d.head.append(style);
+      form.insertBefore(box,form.querySelector('.buttons'));
+      form.addEventListener('submit',e=>{if(!d.querySelector('#confidentiality-accept').checked){e.preventDefault();e.stopImmediatePropagation();alert('لطفاً ابتدا متن تعهد محرمانگی را بخوانید و گزینهٔ پذیرش را انتخاب کنید.');}},true);
+    }
     const tell=t=>{if(note)note.textContent=t};
     d.querySelectorAll('button.mic').forEach(button=>{
       const field=button.previousElementSibling;if(!field||button.dataset.safeDictation)return;
